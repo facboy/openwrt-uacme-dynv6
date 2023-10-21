@@ -19,6 +19,23 @@ SCRIPT_DIR="$(dirname -- $(readlink -f -- "$0"))"
 # vars for acme
 PROJECT_NAME="uacme_dynv6-hook.sh"
 
+# load UCI config
+. /lib/functions.sh
+
+config_load acme
+
+# load acme logging levels
+config_get SYS_LOG "${UACME_UCI_SECTION}" acme_syslog_level ""
+config_get DEBUG "${UACME_UCI_SECTION}" acme_debug_level ""
+
+# load credentials
+handle_credentials() {
+    local credential="$1"
+    eval export "$credential"
+}
+config_list_foreach "${UACME_UCI_SECTION}" credentials handle_credentials
+echo DYNV6_TOKEN=$DYNV6_TOKEN
+
 # load acme functions
 . "${SCRIPT_DIR}/acme_stub.sh"
 . "${SCRIPT_DIR}/dns_dynv6.sh"
@@ -34,36 +51,36 @@ ARGS=5
 E_BADARGS=85
 
 if [ $# -ne "$ARGS" ]; then
-    echo "Usage: $(basename "$0") method type ident token auth" 1>&2
-    exit $E_BADARGS
+	echo "Usage: $(basename "$0") method type ident token auth" 1>&2
+	exit $E_BADARGS
 fi
 
 case "$METHOD" in
-    "begin")
-        case "$TYPE" in
-            dns-01)
-                dns_dynv6_add "_acme-challenge.$IDENT" "$AUTH"
-                exit $?
-                ;;
-            *)
-                exit 1
-                ;;
-        esac
-        ;;
+	"begin")
+		case "$TYPE" in
+			dns-01)
+				dns_dynv6_add "_acme-challenge.$IDENT" "$AUTH"
+				exit $?
+				;;
+			*)
+				exit 1
+				;;
+		esac
+		;;
 
-    "done"|"failed")
-        case "$TYPE" in
-            dns-01)
-                dns_dynv6_rm "_acme-challenge.$IDENT"
-                exit $?
-                ;;
-            *)
-                exit 1
-                ;;
-        esac
-        ;;
+	"done"|"failed")
+		case "$TYPE" in
+			dns-01)
+				dns_dynv6_rm "_acme-challenge.$IDENT"
+				exit $?
+				;;
+			*)
+				exit 1
+				;;
+		esac
+		;;
 
-    *)
-        echo "$0: invalid method" 1>&2
-        exit 1
+	*)
+		echo "$0: invalid method" 1>&2
+		exit 1
 esac

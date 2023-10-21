@@ -329,13 +329,13 @@ issue_cert()
 	    acme_args="$acme_args --dns $dns"
 	else
 	    log "Using dns mode with dns-01"
-	    HPROGRAM="/root/uacme/uacme-dynv6-hook.sh"
-		set -x
-	    handle_credentials() {
-	    	local credential="$1"
-	    	eval export "$credential"
-		}
-		config_list_foreach "$section" credentials handle_credentials
+	    # load hook program from config
+	    config_get config_hprogram "$section" uacme_hook ""
+	    if [ -n "${config_hprogram}" ]; then
+	    	HPROGRAM="${config_hprogram}"
+	    fi
+	    # export section name for hook to use
+	    export UACME_UCI_SECTION="$section"
 #	    uacme_args="$uacme_args --dns $dns"
 	fi
     elif [ -z "$webroot" ]; then

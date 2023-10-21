@@ -32,7 +32,11 @@ SYSLOG_LEVEL_DEFAULT=$SYSLOG_LEVEL_ERROR
 #none
 SYSLOG_LEVEL_NONE=0
 
-SYS_LOG=${SYSLOG_LEVEL_DEFAULT}
+SYS_LOG=${SYS_LOG:-$SYSLOG_LEVEL_DEFAULT}
+# disable logging to file
+LOG_FILE=
+# disable debug to stderr
+DEBUG=
 
 __green() {
   if [ "${__INTERACTIVE}${ACME_NO_COLOR:-0}" = "10" -o "${ACME_FORCE_COLOR}" = "1" ]; then
@@ -205,6 +209,25 @@ _exists() {
   ret="$?"
   _debug3 "$cmd exists=$ret"
   return $ret
+}
+
+#options file
+_sed_i() {
+  options="$1"
+  filename="$2"
+  if [ -z "$filename" ]; then
+    _usage "Usage:_sed_i options filename"
+    return 1
+  fi
+  _debug2 options "$options"
+  if sed -h 2>&1 | grep "\-i\[SUFFIX]" >/dev/null 2>&1; then
+    _debug "Using sed  -i"
+    sed -i "$options" "$filename"
+  else
+    _debug "No -i support in sed"
+    text="$(cat "$filename")"
+    echo "$text" | sed "$options" >"$filename"
+  fi
 }
 
 _time() {
@@ -507,4 +530,9 @@ _get() {
 _saveaccountconf_mutable() {
   # noop, don't save anything
   return 0
+}
+
+_readaccountconf_mutable() {
+  _err "_readaccountconf_mutable() should never be called, exiting..."
+  exit 1
 }
