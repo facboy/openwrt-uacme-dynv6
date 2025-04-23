@@ -17,7 +17,7 @@
 SCRIPT_DIR="$(dirname -- $(readlink -f -- "$0"))"
 
 # vars for acme
-PROJECT_NAME="uacme-dynv6-hook.sh"
+PROJECT_NAME="uacme-cf-hook.sh"
 
 # load UCI config
 . /lib/functions.sh
@@ -34,11 +34,14 @@ handle_credentials() {
     eval export "$credential"
 }
 config_list_foreach "${UACME_UCI_SECTION}" credentials handle_credentials
-#echo DYNV6_TOKEN=$DYNV6_TOKEN
+
+[[ -z "${CF_Account_ID}" ]] && CF_Account_ID="_"
+[[ -z "${CF_Key}" ]] && CF_Key="_"
+[[ -z "${CF_Email}" ]] && CF_Email="_"
 
 # load acme functions
-. "${SCRIPT_DIR}/acme_stub.sh"
-. "${SCRIPT_DIR}/dns_dynv6.sh"
+. "${SCRIPT_DIR}/load_acme.sh"
+load_acme "dns_cf.sh"
 
 # Arguments
 METHOD=$1
@@ -55,11 +58,22 @@ if [ $# -ne "$ARGS" ]; then
 	exit $E_BADARGS
 fi
 
+IDENT_CHALLENGE="_acme-challenge.${IDENT}"
+
 case "$METHOD" in
 	"begin")
 		case "$TYPE" in
 			dns-01)
-				dns_dynv6_add "_acme-challenge.$IDENT" "$AUTH"
+				dns_cf_add "${IDENT_CHALLENGE}" "$AUTH"
+				ret=$?
+				if [[ ${ret} -ne 0 ]]; then
+					exit $?
+				fi
+
+
+				DNS_TIMEOUT="30s"
+				_info "Waiting ${DNS_TIMEOUT} for TXT record ${IDENT_CHALLENGE} to be available"
+				timeout "${DNS_TIMEOUT}" sh -c "until nslookup -type=txt ${IDENT_CHALLENGE} 1.1.1.1 | grep -F ${IDENT_CHALLENGE} | grep -qF "${AUTH}"; do sleep 3; done"
 				exit $?
 				;;
 			*)
@@ -71,7 +85,7 @@ case "$METHOD" in
 	"done"|"failed")
 		case "$TYPE" in
 			dns-01)
-				dns_dynv6_rm "_acme-challenge.$IDENT"
+				dns_cf_rm "${IDENT_CHALLENGE}" "$AUTH"
 				exit $?
 				;;
 			*)

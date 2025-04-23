@@ -1,6 +1,6 @@
 # Stripped back version of acme.sh from
 #   https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh
-# Contains just enough to allow dns_dynv6.sh to run
+# Contains just enough to allow dns_dynv6.sh to run and dns_cf.sh to run
 
 LOG_LEVEL_1=1
 LOG_LEVEL_2=2
@@ -227,6 +227,20 @@ _sed_i() {
     _debug "No -i support in sed"
     text="$(cat "$filename")"
     echo "$text" | sed "$options" >"$filename"
+  fi
+}
+
+if [ "$(echo abc | egrep -o b 2>/dev/null)" = "b" ]; then
+  __USE_EGREP=1
+else
+  __USE_EGREP=""
+fi
+
+_egrep_o() {
+  if [ "$__USE_EGREP" ]; then
+    egrep -o -- "$1" 2>/dev/null
+  else
+    sed -n 's/.*\('"$1"'\).*/\1/p'
   fi
 }
 
@@ -525,6 +539,15 @@ _get() {
   fi
   _debug "ret" "$ret"
   return $ret
+}
+
+_head_n() {
+  head -n "$1"
+}
+
+_savedomainconf() {
+  # noop, don't save anything
+  return 0
 }
 
 _saveaccountconf_mutable() {
