@@ -1,10 +1,7 @@
 UACME_TMP="/tmp/uacme"
 
-
 load_acme() {
 	local dnsapi_sh="$1"
-
-	[[ ! -d "${UACME_TMP}" ]] && mkdir "${UACME_TMP}"
 
 	local acme_stub=
 	if [[ -e "${SCRIPT_DIR}/acme_stub.sh" ]]; then
